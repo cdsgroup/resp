@@ -1,0 +1,41 @@
+language: python
+sudo: false
+matrix:
+  include:
+
+  - env:
+    - PYTHON_VER='2.7'
+
+  - env:
+    - PYTHON_VER='3.6'
+
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  - conda create -q -n tenv python=$PYTHON_VER ci-psi4 psi4 numpy -c psi4/label/dev
+  - source activate tenv
+  - conda install pytest pytest-cov codecov -c conda-forge
+  - conda list
+
+before_script:
+  - python -V
+
+script:
+  - pwd
+  - python setup.py install
+  - python -c "import resp; print(resp.__version__)"
+  - python -m pytest -rws -v --capture=sys --cov
+  - python -c "import resp; print(resp.__version__); resp.test()"
+
+notifications:
+  email: false
+
+after_success:
+  - codecov
