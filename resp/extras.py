@@ -15,6 +15,11 @@ def test(extent='full', extras=None):
     extras : list
         Additional arguments to pass to `pytest`.
 
+    Returns
+    -------
+    int
+        Return code from `pytest.main()`. 0 for pass, 1 for fail.
+
     """
     try:
         import pytest
@@ -29,4 +34,5 @@ def test(extent='full', extras=None):
         command.extend(extras)
     command.extend(['--capture=sys', abs_test_dir])
 
-    pytest.main(command)
+    retcode = pytest.main(command)
+    return retcode

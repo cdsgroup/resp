@@ -32,7 +32,7 @@ script:
   - python setup.py install
   - python -c "import resp; print(resp.__version__)"
   - python -m pytest -rws -v --capture=sys --cov
-  - python -c "import resp; print(resp.__version__); resp.test()"
+  - python -c "import sys, resp; print(resp.__version__); rc = resp.test(); sys.exit(rc)"
 
 notifications:
   email: false
