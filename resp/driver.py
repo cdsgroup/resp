@@ -62,39 +62,39 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     options = {k.upper(): v for k, v in sorted(options_list[0].items())}
 
     # VDW surface options
-    if not ('ESP' in options):
+    if 'ESP' not in options:
         options['ESP'] = []
-    if not ('GRID' in options):
+    if 'GRID' not in options:
         options['GRID'] = []
-    if not ('N_VDW_LAYERS' in options):
+    if 'N_VDW_LAYERS' not in options:
         options['N_VDW_LAYERS'] = 4
-    if not ('VDW_SCALE_FACTOR' in options):
+    if 'VDW_SCALE_FACTOR' not in options:
         options['VDW_SCALE_FACTOR'] = 1.4
-    if not ('VDW_INCREMENT' in options):
+    if 'VDW_INCREMENT' not in options:
         options['VDW_INCREMENT'] = 0.2
-    if not ('VDW_POINT_DENSITY' in options):
+    if 'VDW_POINT_DENSITY' not in options:
         options['VDW_POINT_DENSITY'] = 1.0
     # Hyperbolic restraint options
-    if not ('WEIGHT' in options):
+    if 'WEIGHT' not in options:
         options['WEIGHT'] = 1
-    if not ('RESTRAINT' in options):
+    if 'RESTRAINT' not in options:
         options['RESTRAINT'] = True
     if options['RESTRAINT']:
-        if not ('RESP_A' in options):
+        if 'RESP_A' not in options:
             options['RESP_A'] = 0.0005
-        if not ('RESP_B' in options):
+        if 'RESP_B' not in options:
             options['RESP_B'] = 0.1
-        if not ('IHFREE' in options):
+        if 'IHFREE' not in options:
             options['IHFREE'] = True
-        if not ('TOLER' in options):
+        if 'TOLER' not in options:
             options['TOLER'] = 1e-5
-        if not ('MAX_IT' in options):
+        if 'MAX_IT' not in options:
             options['MAX_IT'] = 25
 
     # QM options
-    if not ('METHOD_ESP' in options):
+    if 'METHOD_ESP' not in options:
         options['METHOD_ESP'] = 'scf'
-    if not ('BASIS_ESP' in options):
+    if 'BASIS_ESP' not in options:
         options['BASIS_ESP'] = '6-31g*'
 
     options_list[0] = options
@@ -105,7 +105,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     for imol in range(len(molecules)):
         options = {k.upper(): v for k, v in options_list[imol].items()}
         # VDW surface options
-        if not ('RADIUS' in options):
+        if 'RADIUS' not in options:
             options['RADIUS'] = {}
         radii = {}
         for i in options['RADIUS']:
@@ -113,11 +113,11 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options['RADIUS'] = radii
 
         # Constraint options
-        if not ('CONSTRAINT_CHARGE' in options):
+        if 'CONSTRAINT_CHARGE' not in options:
             options['CONSTRAINT_CHARGE'] = []
-        if not ('CONSTRAINT_GROUP' in options):
+        if 'CONSTRAINT_GROUP' not in options:
             options['CONSTRAINT_GROUP'] = []
-        if not ('CONSTRAINT_EQUAL' in options):
+        if 'CONSTRAINT_EQUAL' not in options:
             options['CONSTRAINT_EQUAL'] = []
     
         if imol > 0:
