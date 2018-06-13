@@ -62,39 +62,39 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     options = {k.upper(): v for k, v in sorted(options_list[0].items())}
 
     # VDW surface options
-    if not ('ESP' in options.keys()):
+    if not ('ESP' in options):
         options['ESP'] = []
-    if not ('GRID' in options.keys()):
+    if not ('GRID' in options):
         options['GRID'] = []
-    if not ('N_VDW_LAYERS' in options.keys()):
+    if not ('N_VDW_LAYERS' in options):
         options['N_VDW_LAYERS'] = 4
-    if not ('VDW_SCALE_FACTOR' in options.keys()):
+    if not ('VDW_SCALE_FACTOR' in options):
         options['VDW_SCALE_FACTOR'] = 1.4
-    if not ('VDW_INCREMENT' in options.keys()):
+    if not ('VDW_INCREMENT' in options):
         options['VDW_INCREMENT'] = 0.2
-    if not ('VDW_POINT_DENSITY' in options.keys()):
+    if not ('VDW_POINT_DENSITY' in options):
         options['VDW_POINT_DENSITY'] = 1.0
     # Hyperbolic restraint options
-    if not ('WEIGHT' in options.keys()):
+    if not ('WEIGHT' in options):
         options['WEIGHT'] = 1
-    if not ('RESTRAINT' in options.keys()):
+    if not ('RESTRAINT' in options):
         options['RESTRAINT'] = True
     if options['RESTRAINT']:
-        if not ('RESP_A' in options.keys()):
+        if not ('RESP_A' in options):
             options['RESP_A'] = 0.0005
-        if not ('RESP_B' in options.keys()):
+        if not ('RESP_B' in options):
             options['RESP_B'] = 0.1
-        if not ('IHFREE' in options.keys()):
+        if not ('IHFREE' in options):
             options['IHFREE'] = True
-        if not ('TOLER' in options.keys()):
+        if not ('TOLER' in options):
             options['TOLER'] = 1e-5
-        if not ('MAX_IT' in options.keys()):
+        if not ('MAX_IT' in options):
             options['MAX_IT'] = 25
 
     # QM options
-    if not ('METHOD_ESP' in options.keys()):
+    if not ('METHOD_ESP' in options):
         options['METHOD_ESP'] = 'scf'
-    if not ('BASIS_ESP' in options.keys()):
+    if not ('BASIS_ESP' in options):
         options['BASIS_ESP'] = '6-31g*'
 
     options_list[0] = options
@@ -105,24 +105,24 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     for imol in range(len(molecules)):
         options = {k.upper(): v for k, v in options_list[imol].items()}
         # VDW surface options
-        if not ('RADIUS' in options.keys()):
+        if not ('RADIUS' in options):
             options['RADIUS'] = {}
         radii = {}
-        for i in options['RADIUS'].keys():
+        for i in options['RADIUS']:
             radii[i.upper()] = options['RADIUS'][i]
         options['RADIUS'] = radii
 
         # Constraint options
-        if not ('CONSTRAINT_CHARGE' in options.keys()):
+        if not ('CONSTRAINT_CHARGE' in options):
             options['CONSTRAINT_CHARGE'] = []
-        if not ('CONSTRAINT_GROUP' in options.keys()):
+        if not ('CONSTRAINT_GROUP' in options):
             options['CONSTRAINT_GROUP'] = []
-        if not ('CONSTRAINT_EQUAL' in options.keys()):
+        if not ('CONSTRAINT_EQUAL' in options):
             options['CONSTRAINT_EQUAL'] = []
     
         if imol > 0:
-            for i in final_options_list[0].keys():
-                if i not in options.keys() and i.isupper():
+            for i in final_options_list[0]:
+                if i not in options and i.isupper():
                     options[i] = final_options_list[0][i] 
 
         options['mol_charge'] = molecules[imol].molecular_charge()
@@ -201,8 +201,8 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         # Write the results to disk
         with open(str(imol+1) + '_' + molecules[imol].name() + "_results.out", "w") as f:
             f.write("\n Electrostatic potential parameters\n")
-            f.write("\n Geometry (see% i_%s.xyz in Angstrom)\n" %(imol+1, molecules[imol].name()))
-            f.write("\n Grid information (see %i_%s_grid.dat in %s)\n" %(imol+1, molecules[imol].name(), molecules[imol].units))
+            f.write("\n Grid information (see %i_%s_grid.dat in %s)\n"
+                    %(imol+1, molecules[imol].name(), str(molecules[imol].units).split('.')[1]))
             f.write("     van der Waals radii (Angstrom):\n")
             for i, j in radii.items():
                 f.write("                                %8s%8.3f\n" %(i, j/scale_factor))
@@ -212,7 +212,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             f.write("     VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
             f.write("     Number of grid points:            %d\n" %len(options['esp_values']))
 
-            f.write("\n Quantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1,molecules[0].name()))
+            f.write("\n Quantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1, molecules[imol].name()))
             f.write("     ESP method:                       %s\n" %options['METHOD_ESP'])
             f.write("     ESP basis set:                    %s\n" %options['BASIS_ESP'])
 
