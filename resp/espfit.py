@@ -136,9 +136,9 @@ def iterate(q, akeep, b, resp_a, resp_b, ihfree, symbols, toler,
         qkeep = copy.deepcopy(q_q)
         difm = np.sqrt(difm)
     if difm > toler:
-        note += '\nCharge fitting did not converge; ' +\
-               'try increasing the maximum number of iterations to ' +\
-               '> %i.' %maxit
+        note += ('\nCharge fitting did not converge; ' + 
+               'try increasing the maximum number of iterations to ' +
+               '> %i.' %maxit)
     return q_q, note
 
 

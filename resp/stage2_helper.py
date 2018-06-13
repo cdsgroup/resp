@@ -38,8 +38,8 @@ class stage2_helper(object):
         for i in range(molecule.natom()-1):
             hydrogens = []
             for j in range(i+1, molecule.natom()):
-                if (symbols[i] == 'C' and symbols[j] == 'H') or \
-                   (symbols[j] == 'C' and symbols[i] == 'H'):
+                if ((symbols[i] == 'C' and symbols[j] == 'H') or
+                   (symbols[j] == 'C' and symbols[i] == 'H')):
                     d = np.linalg.norm(coordinates[i]-coordinates[j])
                     if d < cutoff:
                         if symbols[i] == 'C':

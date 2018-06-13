@@ -1,9 +1,3 @@
-"""
-Helper classes and functions for the RESP program.
-
-Assists in generating van der Waals surface, computing the electrostatic
-potential with Psi4, and adding constraints for two-stage fitting procedure.
-"""
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
@@ -11,7 +5,7 @@ import numpy as np
 
 class vdw_surface_helper(object):
     """
-    A script to generate van der Waals surface of molecules.
+    A helper script to generate van der Waals surface of molecules.
     """
 
     # Van der Waals radii (in angstrom) are taken from GAMESS.
