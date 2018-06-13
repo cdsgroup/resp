@@ -30,9 +30,7 @@ before_script:
 script:
   - pwd
   - python setup.py install
-  - python -c "import resp; print(resp.__version__)"
-  - python -m pytest -rws -v --capture=sys --cov
-  - python -c "import sys, resp; print(resp.__version__); rc = resp.test(); sys.exit(rc)"
+  - python -c "import sys, resp; print(resp.__version__); rc = resp.test(extras=['--cov']); sys.exit(rc)"
 
 notifications:
   email: false
