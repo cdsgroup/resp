@@ -3,11 +3,11 @@ import pytest
 
 
 def test_resp_1():
-    import psi4
+    import qcdb
     import resp
     import numpy as np
 
-    mol = psi4.geometry(""" C   1.45051389  -0.06628932   0.00000000
+    mol = qcdb.Molecule.from_string(""" C   1.45051389  -0.06628932   0.00000000
      H   1.75521613  -0.62865986  -0.87500146
      H   1.75521613  -0.62865986   0.87500146
      H   1.92173244   0.90485897   0.00000000
@@ -23,6 +23,7 @@ def test_resp_1():
                'VDW_POINT_DENSITY'  : 1.0,
                'resp_a'             : 0.0005,
                'RESP_B'             : 0.1,
+               'QM_PACKAGE'         : 'GAMESS'
                }
 
     # Call for first stage fit
@@ -73,7 +74,7 @@ def test_resp_1():
 
 
 def test_resp_2():
-    import psi4
+    import qcdb
     import resp
     import numpy as np
 
@@ -88,7 +89,7 @@ def test_resp_2():
     H   -0.54635470  0.68178278  0.65174288
     H   -0.09873888  0.32890585 -1.03449097
     """
-    mol1 = psi4.geometry(geometry)
+    mol1 = qcdb.Molecule.from_string(geometry)
     mol1.update_geometry()
     mol1.set_name('conformer1')
 
@@ -102,7 +103,7 @@ def test_resp_2():
     H   -0.18892141 -0.68463906 -0.85893815
     H   -0.64257065 -0.32709111  0.84987482
     """
-    mol2 = psi4.geometry(geometry)
+    mol2 = qcdb.Molecule.from_string(geometry)
     mol2.update_geometry()
     mol2.set_name('conformer2')
 
@@ -121,6 +122,7 @@ def test_resp_2():
                'restraint'          : True,
                'ihfree'             : False,
                'WEIGHT'             : 1,
+               'QM_PACKAGE'         : 'PSI4'
                }
     options2 = {'WEIGHT': 1}
     options = [options1, options2]

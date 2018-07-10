@@ -4,7 +4,7 @@
 
 from __future__ import division, absolute_import, print_function
 
-__authors__ =  "Asim Alenaizan"
+__authors__ =  "Asim Alenaizan and Lori A. Burns"
 __version__ = '0.7'
 __license__ = "BSD-3-Clause"
 __date__    = "2018-04-28"

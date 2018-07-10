@@ -1,6 +1,7 @@
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
+import qcdb
 
 
 class stage2_helper(object):
@@ -14,7 +15,7 @@ class stage2_helper(object):
 
         Parameters
         ----------
-        molecule : psi4.Molecule instance
+        molecule : qcdb.Molecule instance
 
         cutoff : float, optional
             a cutoff distance in Angstroms, exclusive
@@ -27,9 +28,9 @@ class stage2_helper(object):
             connected hydrogen atoms.
 
         """
-        bohr_to_angstrom = 0.52917721092
+        bohr_to_angstrom = qcdb.physconst.psi_bohr2angstroms
         coordinates = molecule.geometry()
-        coordinates = coordinates.np.astype('float')*bohr_to_angstrom
+        coordinates = np.array(coordinates)*bohr_to_angstrom
         symbols = []
         for i in range(molecule.natom()):
             symbols.append(molecule.symbol(i))
@@ -66,7 +67,7 @@ class stage2_helper(object):
 
         Parameters
         ----------
-        molecule : psi4.core.Molecule
+        molecule : qcdb.Molecule
 
         charges : :py:class:`numpy.ndarray`
             array containing the charges from the first stage fit
@@ -109,8 +110,8 @@ class stage2_helper(object):
 
         Parameters
         ----------
-        molecules : list of psi4.Molecule
-            list of psi4.Molecule instances.
+        molecules : list of qcdb.Molecule
+            list of qcdb.Molecule instances.
         cutoff : float, optional
             cutoff distance in Angstroms, exclusive
 

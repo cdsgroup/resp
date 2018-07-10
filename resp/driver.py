@@ -13,11 +13,12 @@ __date__      = "2018-04-28"
 import os
 
 import numpy as np
+import qcdb
 
 from . import espfit
 from . import vdw_surface_helper
 
-bohr_to_angstrom = 0.52917721092
+bohr_to_angstrom = qcdb.physconst.psi_bohr2angstroms
 
 
 def resp(molecules, options_list=None, intermol_constraints=None):
@@ -26,7 +27,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     Parameters
     ---------- 
     molecules : list
-        list of psi4.Molecule instances
+        list of qcdb.Molecule instances
     options_list : list, optional
         list of dictionaries of user's defined options
     intermol_constraints : dict, optional
@@ -92,10 +93,13 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             options['MAX_IT'] = 25
 
     # QM options
-    if 'METHOD_ESP' not in options:
-        options['METHOD_ESP'] = 'scf'
-    if 'BASIS_ESP' not in options:
-        options['BASIS_ESP'] = '6-31g*'
+    if not options['ESP'] and not options.get('QM_PACKAGE', False):
+        raise Exception("You should either provide the electrostatic potential or set 'QM_PACKAGE' to 'PSI4', 'Q-CHEM', or 'GAMESS'")
+    if not options['ESP']:
+        if 'METHOD_ESP' not in options:
+            options['METHOD_ESP'] = 'hf' if options['QM_PACKAGE'] in ['PSI4', 'Q-CHEM'] else 'SCFTYP=RHF' 
+        if 'BASIS_ESP' not in options:
+            options['BASIS_ESP'] = '6-31g*' if options['QM_PACKAGE'] in ['PSI4', 'Q-CHEM'] else 'GBASIS=N31 NGAUSS=6 NDFUNC=1'
 
     options_list[0] = options
 
@@ -128,7 +132,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options['mol_charge'] = molecules[imol].molecular_charge()
         n_atoms.append(molecules[imol].natom())
         coordinates = molecules[imol].geometry()
-        coordinates = coordinates.np.astype('float')*bohr_to_angstrom
+        coordinates = np.array(coordinates)*bohr_to_angstrom
         options['coordinates'] = coordinates
         symbols = []
         for i in range(n_atoms[-1]):
@@ -140,7 +144,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             # Read grid points
             points = np.loadtxt(options['GRID'])
             np.savetxt('grid.dat', points, fmt='%15.10f')
-            if 'Bohr' in str(molecules[imol].units):
+            if 'Bohr' == molecules[imol].units():
                 points *= bohr_to_angstrom
 
         else:
@@ -154,7 +158,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
                 points.append(surface.shell)
             radii = surface.radii
             points = np.concatenate(points)
-            if 'Bohr' in str(molecules[imol].units):
+            if 'Bohr' == molecules[imol].units():
                 points /= bohr_to_angstrom
                 np.savetxt('grid.dat', points, fmt='%15.10f')
                 points *= bohr_to_angstrom
@@ -167,13 +171,24 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             options['esp_values'] = np.loadtxt(options['ESP'])
             np.savetxt('grid_esp.dat', options['esp_values'], fmt='%15.10f')
         else:
-            import psi4
-            psi4.core.set_active_molecule(molecules[imol])
-            psi4.set_options({'basis': options['BASIS_ESP']})
-            psi4.prop(options['METHOD_ESP'], properties=['GRID_ESP'])
-            options['esp_values'] = np.loadtxt('grid_esp.dat')
-            psi4.core.clean()
-            
+            if options['QM_PACKAGE'] == 'PSI4':
+                import psi4
+                psi4_geom = psi4.core.Molecule.from_dict(molecules[imol].to_dict())
+                psi4.set_options({'basis': options['BASIS_ESP']})
+                psi4.prop(options['METHOD_ESP'], molecule=psi4_geom, properties=['GRID_ESP'])
+                options['esp_values'] = np.loadtxt('grid_esp.dat')
+                psi4.core.clean()
+
+            elif options['QM_PACKAGE'] == 'Q-CHEM':
+                from .qm_helper import qchem
+                options['esp_values'] = qchem.qchem_esp(molecules[imol], options['METHOD_ESP'], options['BASIS_ESP'])
+
+            elif options['QM_PACKAGE'] == 'GAMESS':
+                from .qm_helper import gamess
+                #from . import gamess
+                options['esp_values'] = gamess.gamess_esp(molecules[imol], options['METHOD_ESP'], options['BASIS_ESP']) 
+
+
         os.system("mv grid.dat %i_%s_grid.dat" %(imol+1, molecules[imol].name()))
         os.system("mv grid_esp.dat %i_%s_grid_esp.dat" %(imol+1, molecules[imol].name()))
         # Build a matrix of the inverse distance from each ESP point to each nucleus
@@ -202,19 +217,22 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         with open(str(imol+1) + '_' + molecules[imol].name() + "_results.out", "w") as f:
             f.write("\n Electrostatic potential parameters\n")
             f.write("\n Grid information (see %i_%s_grid.dat in %s)\n"
-                    %(imol+1, molecules[imol].name(), str(molecules[imol].units).split('.')[1]))
-            f.write("     van der Waals radii (Angstrom):\n")
-            for i, j in radii.items():
-                f.write("                                %8s%8.3f\n" %(i, j/scale_factor))
-            f.write("     Number of VDW layers:             %d\n" %(options["N_VDW_LAYERS"]))
-            f.write("     VDW scale facotr:                 %.3f\n" %(options["VDW_SCALE_FACTOR"]))
-            f.write("     VDW increment:                    %.3f\n" %(options["VDW_INCREMENT"]))
-            f.write("     VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
-            f.write("     Number of grid points:            %d\n" %len(options['esp_values']))
+                    %(imol+1, molecules[imol].name(), molecules[imol].units()))
+            if not options['GRID']: 
+                f.write("     van der Waals radii (Angstrom):\n")
+                for i, j in radii.items():
+                    f.write("                                %8s%8.3f\n" %(i, j/scale_factor))
+                f.write("     Number of VDW layers:             %d\n" %(options["N_VDW_LAYERS"]))
+                f.write("     VDW scale facotr:                 %.3f\n" %(options["VDW_SCALE_FACTOR"]))
+                f.write("     VDW increment:                    %.3f\n" %(options["VDW_INCREMENT"]))
+                f.write("     VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
+                f.write("     Number of grid points:            %d\n" %len(options['esp_values']))
 
             f.write("\n Quantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1, molecules[imol].name()))
-            f.write("     ESP method:                       %s\n" %options['METHOD_ESP'])
-            f.write("     ESP basis set:                    %s\n" %options['BASIS_ESP'])
+            if not options['ESP']:
+                f.write("     QM package:                       %s\n" %options['QM_PACKAGE'])
+                f.write("     ESP method:                       %s\n" %options['METHOD_ESP'])
+                f.write("     ESP basis set:                    %s\n" %options['BASIS_ESP'])
 
             f.write("\n Constraints\n")
             if options['CONSTRAINT_CHARGE']:
