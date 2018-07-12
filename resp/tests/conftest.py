@@ -3,17 +3,11 @@ import pytest
 
 @pytest.fixture(scope="session", autouse=True)
 def set_up_overall(request):
-#    import psi4
-#    psi4.set_output_file("pytest_output.dat", False)
     request.addfinalizer(tear_down)
 
 @pytest.fixture(scope="function", autouse=True)
 def set_up():
     pass
-#    import psi4
-#    psi4.core.clean()
-#    psi4.core.clean_options()
-#    psi4.set_output_file("pytest_output.dat", True)
 
 def tear_down():
     import os
