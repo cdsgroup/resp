@@ -1,19 +1,29 @@
-import qcdb
-import numpy as np
 import subprocess
 import os
 
+import qcdb
+import numpy as np
+
 class gamess(object):
     def parse_gamess_esp(output):
-        """ A fucntion to parse GAMESS output files and extract
+        """A fucntion to parse GAMESS output files and extract
             electrostatic potential. It can also parse concatenated
             GAMESS files.
-            input:
-                  output: path to output file
-            output:
-                  esp: numpy array of electrostatic potentials
-            Note: electrostatic potential is available in grid_esp.dat
+
+        Parameters
+        ----------
+        output : str 
+            path to output file
+        Returns
+        -------
+        esp : ndarray
+            numpy array of electrostatic potentials
+
+        Note
+        ----
+        electrostatic potential is available in grid_esp.dat
         """
+
         f = open(output, 'r').readlines()
         i = 0
         esp = []
@@ -36,15 +46,19 @@ class gamess(object):
         return esp
 
     def gamess_esp(molecule, method, basis):
-        """ Computation of QM electrostatic potential with GAMESS
-            input:
-                  molecule: an instance of the QCDB Molecule class
-            output:
-                  esp: numpy array of electrostatic potentials
-            Note: Only support RHF/6-31G*. To run other methods
-                  manually modify the input files and then use
-                  parse_gamess_esp function to extract output.
+        """Computation of QM electrostatic potential with GAMESS
+
+        Parameters
+        ----------
+        molecule : qcdb.Molecule
+            An instance of qcdb.Molecule class
+
+        Returns
+        -------
+        esp : ndarray
+            numpy array of electrostatic potentials
         """
+
         grid_complete = open('grid.dat', 'r').readlines()
         count = 0
         arrays = molecule.to_arrays()
@@ -93,12 +107,19 @@ class gamess(object):
 
 class qchem(object):
     def qchem_esp(molecule, method, basis):
-        """ Computation of QM electrostatic potential with Q-CHEM
-            input:
-                  molecule: an instance of the QCDB Molecule class
-            output:
-                  esp: numpy array of electrostatic potentials
+        """Computation of QM electrostatic potential with GAMESS
+
+        Parameters
+        ----------
+        molecule : qcdb.Molecule
+            An instance of qcdb.Molecule class
+
+        Returns
+        -------
+        esp : ndarray
+            numpy array of electrostatic potentials
         """
+
         grid = np.loadtxt('grid.dat')
         arrays = molecule.to_arrays()
         symbols, coordinates = arrays[2], np.array(arrays[0])
@@ -106,25 +127,23 @@ class qchem(object):
         if molecule.units() == 'Angstrom':
             grid /= qcdb.physconst.psi_bohr2angstroms
         input_file = """$molecule
-    %i %i
-    """ %(molecule.molecular_charge(), molecule.multiplicity())
+  %i %i\n""" %(molecule.molecular_charge(), molecule.multiplicity())
         for i in range(molecule.natom()):
-            input_file += ' ' + symbols[i] + '   '
+            input_file += '  ' + symbols[i] + '   '
             for j in range(3):
                 input_file += '%16.9f' %(coordinates[i, j]) + '   '
             input_file += '\n'
         input_file += '$end\n\n'
         input_file += """$rem
-       METHOD     %s
-       BASIS      %s
-       IGDESP     %i
-       IANLTY     200
-    $end
+  METHOD     %s
+  BASIS      %s
+  IGDESP     %i
+  IANLTY     200
+$end
      
-    $plots
-    Compute ESP
-    """ %(method, basis, len(grid))
-        input_file += '1 0 0\n1 0 0\n1 0 0\n0  0  0  0\n$end\n\n$grid\n'
+$plots
+  Compute ESP\n""" %(method, basis, len(grid))
+        input_file += '  1 0 0\n1 0 0\n1 0 0\n0  0  0  0\n$end\n\n$grid\n'
 
         for i in range(len(grid)):
             input_file += '%16.9f%16.9f%16.9f\n' %(grid[i, 0], grid[i, 1], grid[i, 2])

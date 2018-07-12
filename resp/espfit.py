@@ -32,6 +32,7 @@ def esp_solve(a, b):
     note = ''
     if np.linalg.cond(a) > 1/np.finfo(a.dtype).eps:
         note = "Possible fit problem; singular matrix"
+
     return q, note
 
 
@@ -69,13 +70,14 @@ def restraint(q, akeep, resp_a, resp_b, ihfree, symbols, n_atoms, n_constraints)
     n_mol = len(n_atoms)
     index = 0
     index_q = 0
-    for mol in range(n_mol):
-        for i in range(n_atoms[mol]):
-            if not ihfree[mol] or symbols[mol][i] != 'H':
+    for imol in range(n_mol):
+        for i in range(n_atoms[imol]):
+            if not ihfree[imol] or symbols[imol][i] != 'H':
                 a[index+i, index+i] = (akeep[index+i, index+i]
-                + resp_a[mol]/np.sqrt(q[index_q]**2 + resp_b[mol]**2))
+                + resp_a[imol]/np.sqrt(q[index_q]**2 + resp_b[imol]**2))
             index_q += 1
-        index += n_atoms[mol] + n_constraints[mol]
+        index += n_atoms[imol] + n_constraints[imol]
+
     return a
 
 
@@ -139,6 +141,7 @@ def iterate(q, akeep, b, resp_a, resp_b, ihfree, symbols, toler,
         note += ('\nCharge fitting did not converge; ' + 
                'try increasing the maximum number of iterations to ' +
                '> %i.' %maxit)
+
     return q_q, note
 
 
@@ -204,6 +207,7 @@ def intramolecular_constraints(constraint_charge, constraint_equal, constraint_g
             group.append(-i[j-1])
             group.append(i[j])
             constrained_indices.append(group)
+
     return constrained_charges, constrained_indices
 
 
@@ -267,13 +271,13 @@ def intermolecular_constraints(constraint_charge, constraint_equal):
     return constrained_charges, constrained_indices, molecules
 
 
-def fit(options, inter_constraint):
+def fit(qopt, data, inter_constraint):
     """Performs ESP and RESP fits.
 
     Parameters
     ----------
-    options : list
-        list of dictionaries of fitting options and internal data
+    qopt : qcdb RESP options
+        RESP fitting options
     inter_constraint : dict
         dictionary of user-defined intermolecular constraints.
 
@@ -287,26 +291,20 @@ def fit(options, inter_constraint):
         list of strings of notes on the fitting
 
     """
-    rest = options[0]['RESTRAINT']
-    n_mols = len(options)
-    qf = []
-    labelf = []
-    notes = []
-    invr, coordinates, n_constraint, symbols, n_atoms = [], [], [], [], []
-    constrained_charges, constrained_indices = [], []
+    rest = qopt['RESTRAINT'].value
+    n_mols = len(qopt['WEIGHT'].value)
+    qf, labelf, notes = [], [], []
+    n_constraint, constrained_charges, constrained_indices = [], [], []
     ndim = 0
     con_charges_sys, con_indices_sys, con_mol_sys = intermolecular_constraints(
                                                      inter_constraint['CHARGE'],
                                                      inter_constraint['EQUAL'])
     n_sys_constraint = len(con_charges_sys)
-    for mol in range(n_mols):
-        invr.append(options[mol]['invr'])
-        coordinates.append(options[mol]['coordinates'])
-        symbols.append(options[mol]['symbols'])
-        n_atoms.append(len(symbols[mol]))
-        constraint_charge = options[mol]['CONSTRAINT_CHARGE']
-        constraint_equal = options[mol]['CONSTRAINT_EQUAL']
-        constraint_groups = options[mol]['CONSTRAINT_GROUP']
+    invr, coordinates, symbols, n_atoms = data['invr'], data['coordinates'], data['symbols'], data['n_atoms']
+    for imol in range(n_mols):
+        constraint_charge = qopt['CONSTRAINT_CHARGE'].value[imol]
+        constraint_equal = qopt['CONSTRAINT_EQUAL'].value[imol]
+        constraint_groups = qopt['CONSTRAINT_GROUP'].value[imol]
         # Get user-defined constraints
         charges, indices = intramolecular_constraints(constraint_charge,
                                                        constraint_equal,
@@ -314,13 +312,13 @@ def fit(options, inter_constraint):
         constrained_charges.append(charges)
         constrained_indices.append(indices)
         n_con = len(charges)
-        if mol == 0:
+        if imol == 0:
             n_con += 1
         n_constraint.append(n_con)
-        ndim += n_atoms[mol] + n_constraint[mol]
+        ndim += n_atoms[imol] + n_constraint[imol]
     n_atoms = np.array(n_atoms)
     n_constraint = np.array(n_constraint)
-    symbols = np.array(symbols, dtype='str')
+
     # Additional constraint to make charges in different molecules equal
     # to the charge in the first molecule
     # Also, Total charges = molecular charge
@@ -332,32 +330,32 @@ def fit(options, inter_constraint):
     edges_f = 0
     indices = []
     # Bayly:93:10271 (Eqs. 12-14)
-    for mol in range(n_mols):
-        indices.append(range(edges_i, edges_i+n_atoms[mol]))
+    for imol in range(n_mols):
+        indices.append(range(edges_i, edges_i+n_atoms[imol]))
         # Construct A: A_jk = sum_i [(1/r_ij)*(1/r_ik)]
-        inv = invr[mol].reshape((1, invr[mol].shape[0], invr[mol].shape[1]))
-        a[edges_i:n_atoms[mol]+edges_i,
-          edges_i:n_atoms[mol]+edges_i] = np.einsum("iwj, iwk -> jk", inv, inv)
+        inv = invr[imol].reshape((1, invr[imol].shape[0], invr[imol].shape[1]))
+        a[edges_i:n_atoms[imol]+edges_i,
+          edges_i:n_atoms[imol]+edges_i] = np.einsum("iwj, iwk -> jk", inv, inv)
 
         # Construct B: B_j = sum_i (V_i/r_ij)
-        b[edges_i:n_atoms[mol]+edges_i] = np.dot(options[mol]['esp_values'], invr[mol])
+        b[edges_i:n_atoms[imol]+edges_i] = np.dot(data['esp_values'][imol], invr[imol])
         # Sum of point charges = molecular charge
-        a[edges_i:n_atoms[mol]+edges_i, edges_i:n_atoms[mol]+edges_i] *= options[mol]['WEIGHT']**2
-        b[edges_i:n_atoms[mol]+edges_i] *= options[mol]['WEIGHT']**2
-        edges_f += n_atoms[mol]
-        if mol == 0:
+        a[edges_i:n_atoms[imol]+edges_i, edges_i:n_atoms[imol]+edges_i] *= qopt['WEIGHT'].value[imol]**2
+        b[edges_i:n_atoms[imol]+edges_i] *= qopt['WEIGHT'].value[imol]**2
+        edges_f += n_atoms[imol]
+        if imol == 0:
             a[:n_atoms[0], n_atoms[0]] = 1
             a[n_atoms[0], :n_atoms[0]] = 1
-            b[n_atoms[0]] = options[0]['mol_charge']
+            b[n_atoms[0]] = data['mol_charge'][0]
             edges_f += 1
 
         # Add constraints to matrices A and B
-        for i in range(1, n_constraint[mol]+1):
-            if mol == 0 and i == n_constraint[mol]:
+        for i in range(1, n_constraint[imol]+1):
+            if imol == 0 and i == n_constraint[imol]:
                 # To account for the total charge constraints in the first molecule
                 break
-            b[edges_f] = constrained_charges[mol][i-1]
-            for k in constrained_indices[mol][i-1]:
+            b[edges_f] = constrained_charges[imol][i-1]
+            for k in constrained_indices[imol][i-1]:
                 if k > 0:
                     a[edges_f, edges_i+k-1] = 1
                     a[edges_i+k-1, edges_f] = 1
@@ -368,8 +366,7 @@ def fit(options, inter_constraint):
         edges_i = edges_f
     indices = np.array(indices).flatten()
 
-        # Add intermolecular constraints to A and B
-
+    # Add intermolecular constraints to A and B
     if n_mols > 1:
         for i in range(n_sys_constraint):
             b[edges_f] = con_charges_sys[i]
@@ -392,13 +389,8 @@ def fit(options, inter_constraint):
     if not rest:
         return qf, labelf, notes
     else:
-        ihfree, resp_a, resp_b = [], [], []
-        for mol in range(n_mols):
-            ihfree.append(options[mol]['IHFREE'])
-            resp_a.append(options[mol]['RESP_A'])
-            resp_b.append(options[mol]['RESP_B'])
-        toler = options[0]['TOLER']
-        maxit = options[0]['MAX_IT']
+        ihfree, resp_a, resp_b = qopt['IHFREE'].value, qopt['RESP_A'].value, qopt['RESP_B'].value
+        toler, maxit = qopt['TOLER'].value, qopt['MAX_IT'].value
         # Restrained ESP
         labelf.append('RESP')
         q, note = iterate(q, a, b, resp_a, resp_b, ihfree, symbols, toler, maxit,

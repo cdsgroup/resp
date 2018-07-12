@@ -89,8 +89,7 @@ class vdw_surface_helper(object):
                 radii[i] = self.vdw_r[i] * scale_factor
             else:
                 raise KeyError('%s is not a supported element; ' %i
-                             + 'use the "RADIUS" option to add '
-                             + 'its van der Waals radius.')
+                             + 'use the "RADIUS" option to add its van der Waals radius.')
         for i in range(len(coordinates)):
             # calculate points
             n_points = int(density * 4.0 * np.pi* np.power(radii[elements[i]], 2))

@@ -28,12 +28,9 @@ class stage2_helper(object):
             connected hydrogen atoms.
 
         """
-        bohr_to_angstrom = qcdb.physconst.psi_bohr2angstroms
-        coordinates = molecule.geometry()
-        coordinates = np.array(coordinates)*bohr_to_angstrom
-        symbols = []
-        for i in range(molecule.natom()):
-            symbols.append(molecule.symbol(i))
+        arrays = molecule.to_arrays()
+        coordinates = arrays[0]*qcdb.physconst.psi_bohr2angstroms
+        symbols = arrays[2]
         l = np.zeros(molecule.natom())
         groups = {}
         for i in range(molecule.natom()-1):
@@ -55,7 +52,7 @@ class stage2_helper(object):
         return groups
 
 
-    def set_stage2_constraint(self, molecule, charges, options, cutoff=1.2):
+    def set_stage2_constraint(self, molecule, charges, cutoff=1.2):
         """Sets default constraints for the second stage fit.
 
         The default constraints are the following:
@@ -94,8 +91,8 @@ class stage2_helper(object):
         constraint_charge = []
         for i in atoms:
             constraint_charge.append([charges[i-1], [i]])
-        options['constraint_charge'] = constraint_charge
-        options['constraint_group'] = constraint_group
+        self.constraint_charge = constraint_charge
+        self.constraint_group = constraint_group
 
 
     def stage2_intermolecular_constraint(self, molecules, cutoff=1.2):
@@ -122,9 +119,9 @@ class stage2_helper(object):
 
         """
         inter_constraint = []
-        for mol in range(len(molecules)):
-            equals = [mol,[]]
-            second_stage = self._get_stage2_atoms(molecules[mol], cutoff=cutoff)
+        for imol in range(len(molecules)):
+            equals = [imol,[]]
+            second_stage = self._get_stage2_atoms(molecules[imol], cutoff=cutoff)
             for i in second_stage.keys():
                 equals[1].append(i)
                 try:
