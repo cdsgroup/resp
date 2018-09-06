@@ -170,6 +170,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             import psi4
             psi4.core.set_active_molecule(molecules[imol])
             psi4.set_options({'basis': options['BASIS_ESP']})
+            psi4.set_options(options.get('PSI4_OPTIONS', {}))
             psi4.prop(options['METHOD_ESP'], properties=['GRID_ESP'])
             options['esp_values'] = np.loadtxt('grid_esp.dat')
             psi4.core.clean()
