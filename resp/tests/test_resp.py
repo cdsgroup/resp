@@ -17,11 +17,9 @@ def test_resp_1():
      O  -0.62675864   1.13160510   0.00000000""")
     mol.update_geometry()
 
-    options = {'N_VDW_LAYERS'       : 4,
-               'VDW_SCALE_FACTOR'   : 1.4,
-               'VDW_INCREMENT'      : 0.2,
+    options = {'VDW_SCALE_FACTORS'  : [1.4, 1.6, 1.8, 2.0],
                'VDW_POINT_DENSITY'  : 1.0,
-               'resp_a'             : 0.0005,
+               'RESP_A'             : 0.0005,
                'RESP_B'             : 0.1,
                }
 
@@ -112,14 +110,12 @@ def test_resp_2():
     intermolecular_constraint = {'EQUAL': [[[1, range(1, 10)], [2, range(1, 10)]]]}
 
     # Specify options
-    options1 = {'N_VDW_LAYERS'       : 4,
-               'VDW_SCALE_FACTOR'   : 1.4,
-               'VDW_INCREMENT'      : 0.2,
+    options1 = {'VDW_SCALE_FACTORS' : [1.4, 1.6, 1.8, 2.0],
                'VDW_POINT_DENSITY'  : 1.0,
-               'resp_a'             : 0.0005,
+               'RESP_A'             : 0.0005,
                'RESP_B'             : 0.1,
-               'restraint'          : True,
-               'ihfree'             : False,
+               'RESTRAINT'          : True,
+               'IHFREE'             : False,
                'WEIGHT'             : 1,
                }
     options2 = {'WEIGHT': 1}
@@ -142,23 +138,22 @@ def test_resp_2():
     assert np.allclose(charges1[0][1], reference_charges1, atol=1e-5)
 
     # Add constraint for atoms fixed in second stage fit
-    stage2 = resp.stage2_helper()
     for mol in range(len(molecules)):
         print(mol, charges1[mol][1], options[mol])
-        stage2.set_stage2_constraint(molecules[mol], charges1[mol][1], options[mol], cutoff=1.2)
+        resp.set_stage2_constraint(molecules[mol], charges1[mol][1], options[mol], cutoff=1.2)
         options[mol]['grid'] = '%i_%s_grid.dat' %(mol+1, molecules[mol].name())
         options[mol]['esp'] = '%i_%s_grid_esp.dat' %(mol+1, molecules[mol].name())
         options[0]['resp_a'] = 0.001
         molecules[mol].set_name('conformer' + str(mol+1) + '_stage2')
 
     # Add intermolecular constraints
-    stage2.stage2_intermolecular_constraint(molecules, cutoff=1.2)
+    intermolecular_constraint = resp.stage2_intermolecular_constraint(molecules, cutoff=1.2)
 
     # Call for second stage fit
     print(molecules)
     print(options)
-    print(stage2.intermolecular_constraint)
-    charges2 = resp.resp(molecules, options, stage2.intermolecular_constraint)
+    print(intermolecular_constraint)
+    charges2 = resp.resp(molecules, options, intermolecular_constraint)
     print("\nStage Two\n")
     print("RESP Charges")
     print(charges2[0][1])
