@@ -3,8 +3,8 @@ Driver for the RESP code.
 """
 from __future__ import division, absolute_import, print_function
 
-__authors__   =  "Asim Alenaizan"
-__credits__   =  ["Asim Alenaizan"]
+__authors__   =  "Asem Alenaizan"
+__credits__   =  ["Asem Alenaizan"]
 
 __copyright__ = "(c) 2014-2018, The Psi4NumPy Developers"
 __license__   = "BSD-3-Clause"
@@ -15,7 +15,7 @@ import os
 import numpy as np
 
 from . import espfit
-from . import vdw_surface_helper
+from . import vdw_surface
 
 bohr_to_angstrom = 0.52917721092
 
@@ -49,8 +49,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options_list = []
 
     # Check options
-    # Large case keys: resp options
-    # Small case key: internal data
+    # RESP options have large case keys
     intermol_constraints = {k.upper(): v for k, v in intermol_constraints.items()}
 
     if 'CHARGE' not in intermol_constraints:
@@ -66,12 +65,8 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options['ESP'] = []
     if 'GRID' not in options:
         options['GRID'] = []
-    if 'N_VDW_LAYERS' not in options:
-        options['N_VDW_LAYERS'] = 4
     if 'VDW_SCALE_FACTOR' not in options:
-        options['VDW_SCALE_FACTOR'] = 1.4
-    if 'VDW_INCREMENT' not in options:
-        options['VDW_INCREMENT'] = 0.2
+        options['VDW_SCALE_FACTORS'] = [1.4, 1.6, 1.8, 2.0]
     if 'VDW_POINT_DENSITY' not in options:
         options['VDW_POINT_DENSITY'] = 1.0
     # Hyperbolic restraint options
@@ -100,17 +95,19 @@ def resp(molecules, options_list=None, intermol_constraints=None):
     options_list[0] = options
 
     final_options_list = []
+    data = []
     n_atoms = []
     symbols_list = []
     for imol in range(len(molecules)):
         options = {k.upper(): v for k, v in options_list[imol].items()}
+        data_dict = {}
         # VDW surface options
-        if 'RADIUS' not in options:
-            options['RADIUS'] = {}
+        if 'VDW_RADII' not in options:
+            options['VDW_RADII'] = {}
         radii = {}
-        for i in options['RADIUS']:
-            radii[i.upper()] = options['RADIUS'][i]
-        options['RADIUS'] = radii
+        for i in options['VDW_RADII']:
+            radii[i.upper()] = options['VDW_RADII'][i]
+        options['VDW_RADII'] = radii
 
         # Constraint options
         if 'CONSTRAINT_CHARGE' not in options:
@@ -124,16 +121,17 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             for i in final_options_list[0]:
                 if i not in options and i.isupper():
                     options[i] = final_options_list[0][i] 
+        final_options_list.append(options)
 
-        options['mol_charge'] = molecules[imol].molecular_charge()
+        data_dict['mol_charge'] = molecules[imol].molecular_charge()
         n_atoms.append(molecules[imol].natom())
         coordinates = molecules[imol].geometry()
         coordinates = coordinates.np.astype('float')*bohr_to_angstrom
-        options['coordinates'] = coordinates
+        data_dict['coordinates'] = coordinates
         symbols = []
         for i in range(n_atoms[-1]):
             symbols.append(molecules[imol].symbol(i))
-        options['symbols'] = symbols
+        data_dict['symbols'] = symbols
         symbols_list.append(symbols)
 
         if options['GRID']:
@@ -144,15 +142,12 @@ def resp(molecules, options_list=None, intermol_constraints=None):
                 points *= bohr_to_angstrom
 
         else:
-            # Get the points at which we're going to calculate the ESP surface
+            # Get the points at which we're going to calculate the ESP
             points = []
-            surface = vdw_surface_helper.vdw_surface_helper()
-            for i in range(options['N_VDW_LAYERS']):
-                scale_factor = options['VDW_SCALE_FACTOR'] + i * options['VDW_INCREMENT']
-                surface.vdw_surface(coordinates, symbols, scale_factor,
-                                    options['VDW_POINT_DENSITY'], options['RADIUS'])
-                points.append(surface.shell)
-            radii = surface.radii
+            for scale_factor in options['VDW_SCALE_FACTORS']:
+                shell, radii = vdw_surface.vdw_surface(coordinates, symbols, scale_factor,
+                                    options['VDW_POINT_DENSITY'], options['VDW_RADII'])
+                points.append(shell)
             points = np.concatenate(points)
             if 'Bohr' in str(molecules[imol].units):
                 points /= bohr_to_angstrom
@@ -164,15 +159,15 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         # Calculate ESP values at the grid
         if options['ESP']:
             # Read electrostatic potential values
-            options['esp_values'] = np.loadtxt(options['ESP'])
-            np.savetxt('grid_esp.dat', options['esp_values'], fmt='%15.10f')
+            data_dict['esp_values'] = np.loadtxt(options['ESP'])
+            np.savetxt('grid_esp.dat', data_dict['esp_values'], fmt='%15.10f')
         else:
             import psi4
             psi4.core.set_active_molecule(molecules[imol])
             psi4.set_options({'basis': options['BASIS_ESP']})
             psi4.set_options(options.get('PSI4_OPTIONS', {}))
             psi4.prop(options['METHOD_ESP'], properties=['GRID_ESP'])
-            options['esp_values'] = np.loadtxt('grid_esp.dat')
+            data_dict['esp_values'] = np.loadtxt('grid_esp.dat')
             psi4.core.clean()
             
         os.system("mv grid.dat %i_%s_grid.dat" %(imol+1, molecules[imol].name()))
@@ -182,12 +177,12 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         for i in range(invr.shape[0]):
             for j in range(invr.shape[1]):
                 invr[i, j] = 1/np.linalg.norm(points[i]-coordinates[j])
-        options['invr'] = invr*bohr_to_angstrom # convert to atomic units
-        options['coordinates'] /= bohr_to_angstrom # convert to angstroms
+        data_dict['invr'] = invr*bohr_to_angstrom # convert to atomic units
+        data_dict['coordinates'] /= bohr_to_angstrom # convert to angstroms
 
-        final_options_list.append(options)
+        data.append(data_dict)
     # Calculate charges
-    qf, labelf, notes = espfit.fit(final_options_list, intermol_constraints)
+    qf, labelf, notes = espfit.fit(final_options_list, data, intermol_constraints)
     index = 0
     charges = []
     
@@ -207,11 +202,12 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             f.write("     van der Waals radii (Angstrom):\n")
             for i, j in radii.items():
                 f.write("                                %8s%8.3f\n" %(i, j/scale_factor))
-            f.write("     Number of VDW layers:             %d\n" %(options["N_VDW_LAYERS"]))
-            f.write("     VDW scale facotr:                 %.3f\n" %(options["VDW_SCALE_FACTOR"]))
-            f.write("     VDW increment:                    %.3f\n" %(options["VDW_INCREMENT"]))
+            f.write("     VDW scale facotrs:               ")
+            for i in options["VDW_SCALE_FACTORS"]:
+                f.write('%6.2f' %i)
+            f.write('\n')
             f.write("     VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
-            f.write("     Number of grid points:            %d\n" %len(options['esp_values']))
+            f.write("     Number of grid points:            %d\n" %len(data[imol]['esp_values']))
 
             f.write("\n Quantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1, molecules[imol].name()))
             f.write("     ESP method:                       %s\n" %options['METHOD_ESP'])
@@ -269,9 +265,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
                 f.write("     resp_a:                           %.4f\n" %(options["RESP_A"]))
                 f.write("     resp_b:                           %.4f\n" %(options["RESP_B"]))
             f.write("\n Fit\n")
-            for i in notes:
-                if i:
-                    f.write(i+'\n')
+            f.write(notes)
             f.write("\n Electrostatic Potential Charges\n")
             f.write("   Center  Symbol")
             for i in labelf:
@@ -280,11 +274,11 @@ def resp(molecules, options_list=None, intermol_constraints=None):
             for i in range(n_atoms[imol]):
                 f.write("   %5d    %s     " %(i+1, symbols_list[imol][i]))
                 for j in charges[imol]:
-                    f.write("%10.5f" %j[i])
+                    f.write("%12.8f" %j[i])
                 f.write("\n")
             f.write(" Total Charge:    ")
             for i in charges[imol]:
-                f.write("%10.5f" %np.sum(i))
+                f.write("%12.8f" %np.sum(i))
             f.write('\n')
 
     return charges
