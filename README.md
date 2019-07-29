@@ -20,7 +20,7 @@ To install Psi4, go to the this website: https://admiring-tesla-08529a.netlify.c
 choose your preferred option (conda package recommended). If the RESP program was not installed by
 default, execute `conda install resp -c psi4`. To test that the RESP plug-in works,
 execute `python -c "import resp, sys; sys.exit(resp.test('long'))"`.
-Two examples on how to use the plug-in are available in the file `resp/tests/test_resp.py`.
+Two examples on how to use the plug-in are available in the directory `examples`.
 
 ## Code
 The following codes are available:
@@ -31,7 +31,7 @@ The following codes are available:
    - `test_resp_2`: Example for two-stage charge fitting for two conformers.
 
 Helper programs:
-- `resp/vdw_surface_helper.py`
+- `resp/vdw_surface.py`
 - `resp/stage2_helper.py`
 
 ## RESP Method Summary
