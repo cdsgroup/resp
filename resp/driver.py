@@ -196,36 +196,37 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options = final_options_list[imol]
         # Write the results to disk
         with open(str(imol+1) + '_' + molecules[imol].name() + "_results.out", "w") as f:
-            f.write("\n Electrostatic potential parameters\n")
-            f.write("\n Grid information (see %i_%s_grid.dat in %s)\n"
-                    %(imol+1, molecules[imol].name(), str(molecules[imol].units).split('.')[1]))
-            f.write("     van der Waals radii (Angstrom):\n")
-            for i, j in radii.items():
-                f.write("                                %8s%8.3f\n" %(i, j/scale_factor))
-            f.write("     VDW scale facotrs:               ")
-            for i in options["VDW_SCALE_FACTORS"]:
-                f.write('%6.2f' %i)
-            f.write('\n')
-            f.write("     VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
-            f.write("     Number of grid points:            %d\n" %len(data[imol]['esp_values']))
+            f.write("Electrostatic potential parameters\n")
+            f.write("\nGrid information (see %i_%s_grid.dat in %s)\n"
+                    %(imol+1, molecules[imol].name(), molecules[imol].units()))
+            if not options['GRID']:
+                f.write("    van der Waals radii (Angstrom):\n")
+                for i, j in radii.items():
+                    f.write("                               %8s%8.3f\n" %(i, j/scale_factor))
+                f.write("    VDW scale factors:              ")
+                for i in options["VDW_SCALE_FACTORS"]:
+                    f.write('%6.2f' %i)
+                f.write('\n')
+                f.write("    VDW point density:                %.3f\n" %(options["VDW_POINT_DENSITY"]))
+            f.write("    Number of grid points:            %d\n" %len(data[imol]['esp_values']))
 
-            f.write("\n Quantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1, molecules[imol].name()))
-            f.write("     ESP method:                       %s\n" %options['METHOD_ESP'])
-            f.write("     ESP basis set:                    %s\n" %options['BASIS_ESP'])
+            f.write("\nQuantum electrostatic potential (see %i_%s_grid_esp.dat)\n" %(imol+1, molecules[imol].name()))
+            f.write("    ESP method:                       %s\n" %options['METHOD_ESP'])
+            f.write("    ESP basis set:                    %s\n" %options['BASIS_ESP'])
 
-            f.write("\n Constraints\n")
+            f.write("\nConstraints\n")
             if options['CONSTRAINT_CHARGE']:
-                f.write("     Charge constraints\n")
+                f.write("    Charge constraints\n")
                 for i in options['CONSTRAINT_CHARGE']:
-                    f.write("         Total charge of %8.5f on the set" %i[0])
+                    f.write("        Total charge of %12.8f on the set" %i[0])
                     for j in i[1]:
                         f.write("%4d" %j)
                     f.write("\n")
             if options['CONSTRAINT_GROUP'] or options['CONSTRAINT_EQUAL']:
-                f.write("     Equality constraints\n")
-                f.write("         Equal charges on atoms\n")
+                f.write("    Equality constraints\n")
+                f.write("        Equal charges on atoms\n")
                 for i in options['CONSTRAINT_GROUP']:
-                    f.write("                              ")
+                    f.write("                               ")
                     for j in i:
                         f.write("%4d" %j)
                     f.write("\n")
@@ -235,48 +236,48 @@ def resp(molecules, options_list=None, intermol_constraints=None):
                         f.write("%4d%4d" %(i[0][j], i[1][j]))
                         f.write("\n")
             if intermol_constraints['CHARGE'] or intermol_constraints['EQUAL']:
-                f.write('\n     Intermolecular constraints\n')
+                f.write('\n    Intermolecular constraints\n')
                 if intermol_constraints['CHARGE']:
-                    f.write('         Charge constraints\n')
+                    f.write('        Charge constraints\n')
                     for i in intermol_constraints['CHARGE']:
-                        f.write('             Total charge of %8.5f on the set:' %i[0])
+                        f.write('             Total charge of %12.8f on the set:' %i[0])
                         for j in i[1]:
                             f.write('\n                 molecule %4d, atoms' %j[0])
                             for k in j[1]:
                                 f.write('%4d' %k)
                         f.write('\n')
                 if intermol_constraints['EQUAL']:
-                    f.write('         Equality constraints\n')
-                    f.write('             Equal charges on\n')
+                    f.write('        Equality constraints\n')
+                    f.write('            Equal charges on\n')
                     for i in intermol_constraints['EQUAL']:
-                        f.write('                 ')
+                        f.write('                ')
                         f.write('molecule %4d, atoms' %i[0][0])
                         for j in i[0][1]:
                             f.write('%4d' %j)
-                        f.write('\n                 molecule %4d, atoms' %i[1][0])
+                        f.write('\n                molecule %4d, atoms' %i[1][0])
                         for j in i[1][1]:
                             f.write('%4d' %j)
                         f.write('\n\n')
-            f.write("\n Restraint\n")
+            f.write("\nRestraint\n")
             if options['RESTRAINT']:
-                f.write("     Hyperbolic restraint to a charge of zero\n")
+                f.write("    Hyperbolic restraint to a charge of zero\n")
                 if options['IHFREE']:
-                    f.write("     Hydrogen atoms are not restrained\n")
-                f.write("     resp_a:                           %.4f\n" %(options["RESP_A"]))
-                f.write("     resp_b:                           %.4f\n" %(options["RESP_B"]))
-            f.write("\n Fit\n")
+                    f.write("    Hydrogen atoms are not restrained\n")
+                f.write("    resp_a:                           %.4f\n" %(options["RESP_A"]))
+                f.write("    resp_b:                           %.4f\n" %(options["RESP_B"]))
+            f.write("\nFit\n")
             f.write(notes)
-            f.write("\n Electrostatic Potential Charges\n")
+            f.write("\nElectrostatic Potential Charges\n")
             f.write("   Center  Symbol")
             for i in labelf:
                 f.write("%10s" %i)
             f.write("\n")
             for i in range(n_atoms[imol]):
-                f.write("   %5d    %s     " %(i+1, symbols_list[imol][i]))
+                f.write("  %5d    %s     " %(i+1, symbols_list[imol][i]))
                 for j in charges[imol]:
                     f.write("%12.8f" %j[i])
                 f.write("\n")
-            f.write(" Total Charge:    ")
+            f.write("Total Charge:    ")
             for i in charges[imol]:
                 f.write("%12.8f" %np.sum(i))
             f.write('\n')
