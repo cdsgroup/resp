@@ -16,7 +16,7 @@ Restrained Electrostatic Potential
 
 ## Installation
 This RESP code is a plug-in to the Psi4 quantum chemistry package.
-To install Psi4, go to the this website: https://admiring-tesla-08529a.netlify.com/installs/v13/ and
+To install Psi4, go to the this website: https://admiring-tesla-08529a.netlify.com/installs/latest/ and
 choose your preferred option (conda package recommended). If the RESP program was not installed by
 default, execute `conda install resp -c psi4`. To test that the RESP plug-in works,
 execute `python -c "import resp, sys; sys.exit(resp.test('long'))"`.
@@ -53,3 +53,6 @@ changed iteratively until the charges converge.
 
 ## References:
 - [[Bayly:93:10269-10280](https://pubs.acs.org/doi/abs/10.1021/j100142a004)] C. I. Bayly *et. al.* *J. Phys. Chem.* **97**, 10269 (1993)
+
+Please cite this article if you use this program:
+- [Alenaizan:19] A. Alenaizan, L. A. Burns, C. D. Sherrill, Python implementation of the restrained electrostatic potential charge model. *Int J Quantum Chem*. (2019)
