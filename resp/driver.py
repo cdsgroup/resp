@@ -65,7 +65,7 @@ def resp(molecules, options_list=None, intermol_constraints=None):
         options['ESP'] = []
     if 'GRID' not in options:
         options['GRID'] = []
-    if 'VDW_SCALE_FACTOR' not in options:
+    if 'VDW_SCALE_FACTORS' not in options:
         options['VDW_SCALE_FACTORS'] = [1.4, 1.6, 1.8, 2.0]
     if 'VDW_POINT_DENSITY' not in options:
         options['VDW_POINT_DENSITY'] = 1.0
