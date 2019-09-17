@@ -18,30 +18,28 @@ options = {'VDW_SCALE_FACTORS'  : [1.4, 1.6, 1.8, 2.0],
            }
 
 # Call for first stage fit
-charges1 = resp.resp([mol], [options])
+charges1 = resp.resp([mol], options)
 print('Electrostatic Potential Charges')
-print(charges1[0][0])
+print(charges1[0])
 print('Restrained Electrostatic Potential Charges')
-print(charges1[0][1])
-
+print(charges1[1])
 
 # Change the value of the RESP parameter A
-options['resp_a'] = 0.001
+options['RESP_A'] = 0.001
 
 # Add constraint for atoms fixed in second stage fit
 constraint_charge = []
 for i in range(4, 8):
-    constraint_charge.append([charges1[0][1][i], [i+1]])
+    constraint_charge.append([charges1[1][i], [i+1]])
 options['constraint_charge'] = constraint_charge
 options['constraint_group'] = [[2, 3, 4]]
-options['grid'] = '1_%s_grid.dat' %mol.name()
-options['esp'] = '1_%s_grid_esp.dat' %mol.name()
-mol.set_name('stage2')
+options['grid'] = ['1_%s_grid.dat' %mol.name()]
+options['esp'] = ['1_%s_grid_esp.dat' %mol.name()]
 
 # Call for second stage fit
-charges2 = resp.resp([mol], [options])
+charges2 = resp.resp([mol], options)
 
 # Get RESP charges
 print("\nStage Two:\n")
 print('RESP Charges')
-print(charges2[0][1])
+print(charges2[1])

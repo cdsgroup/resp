@@ -44,47 +44,36 @@ mol3 = psi4.geometry(geometry)
 mol3.update_geometry()
 mol3.set_name('conformer3')
 
-
-
 molecules = [mol1, mol2, mol3]
 
-# Specify intermolecular constraints
-intermolecular_constraint = {'EQUAL': [[[1, range(1, 10)], [2, range(1, 10)]], 
-                                       [[1, range(1, 10)], [3, range(1, 10)]]]}
-
 # Specify options
-options1 = {'VDW_SCALE_FACTORS' : [1.4, 1.6, 1.8, 2.0],
+options = {'VDW_SCALE_FACTORS' : [1.4, 1.6, 1.8, 2.0],
            'VDW_POINT_DENSITY'  : 1.0,
            'RESP_A'             : 0.0005,
            'RESP_B'             : 0.1,
            'RESTRAINT'          : True,
            'IHFREE'             : False,
-           'WEIGHT'             : 1,
+           'WEIGHT'             : [1, 1, 1],
            }
-options2 = {'WEIGHT': 1}
-options3 = {'WEIGHT': 1}
-options = [options1, options2, options3]
 
 # Call for first stage fit
-charges1 = resp.resp(molecules, options, intermolecular_constraint)
+charges1 = resp.resp(molecules, options)
 
 print("Restrained Electrostatic Potential Charges")
-print(charges1[0][1])
+print(charges1[1])
 
+options['RESP_A'] = 0.001
+resp.set_stage2_constraint(molecules[0], charges1[1], options)
 
+options['grid'] = []
+options['esp'] = []
 # Add constraint for atoms fixed in second stage fit
 for mol in range(len(molecules)):
-    resp.set_stage2_constraint(molecules[mol], charges1[mol][1], options[mol], cutoff=1.2)
-    options[mol]['grid'] = '%i_%s_grid.dat' %(mol+1, molecules[mol].name())
-    options[mol]['esp'] = '%i_%s_grid_esp.dat' %(mol+1, molecules[mol].name())
-    options[0]['resp_a'] = 0.001
-    molecules[mol].set_name('conformer' + str(mol+1) + '_stage2')
-
-# Add intermolecular constraints
-intermolecular_constraint = resp.stage2_intermolecular_constraint(molecules, cutoff=1.2)
+    options['grid'].append('%i_%s_grid.dat' %(mol+1, molecules[mol].name()))
+    options['esp'].append('%i_%s_grid_esp.dat' %(mol+1, molecules[mol].name()))
 
 # Call for second stage fit
-charges2 = resp.resp(molecules, options, intermolecular_constraint)
+charges2 = resp.resp(molecules, options)
 print("\nStage Two\n")
 print("RESP Charges")
-print(charges2[0][1])
+print(charges2[1])
