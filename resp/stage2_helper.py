@@ -2,20 +2,19 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 
+import psi4
+
 """
 A helper script to facilitate the use of constraints for two-stage fitting.
 """
 
-def _get_stage2_atoms(molecule, cutoff=1.2):
+def _get_stage2_atoms(molecule):
     """Determines atoms for second stage fit. The atoms
-       are identified as C-H bonded groups based and a cutoff distance.
+       are identified as sp3 carbons that have one or more hydrogens.
 
     Parameters
     ----------
     molecule : psi4.Molecule instance
-
-    cutoff : float, optional
-        a cutoff distance in Angstroms, exclusive
 
     Returns
     -------
@@ -25,42 +24,39 @@ def _get_stage2_atoms(molecule, cutoff=1.2):
         connected hydrogen atoms.
 
     """
-    bohr_to_angstrom = 0.52917721092
-    coordinates = molecule.geometry()
-    coordinates = coordinates.np.astype('float')*bohr_to_angstrom
+
     symbols = []
     for i in range(molecule.natom()):
         symbols.append(molecule.symbol(i))
-    l = np.zeros(molecule.natom())
+
     groups = {}
-    for i in range(molecule.natom()-1):
-        hydrogens = []
-        for j in range(i+1, molecule.natom()):
-            if ((symbols[i] == 'C' and symbols[j] == 'H') or
-               (symbols[j] == 'C' and symbols[i] == 'H')):
-                d = np.linalg.norm(coordinates[i]-coordinates[j])
-                if d < cutoff:
-                    if symbols[i] == 'C':
-                        if i+1 not in groups.keys():
-                            groups[i+1] = []
-                        groups[i+1].append(j+1)
-                    if symbols[j] == 'C':
-                        if j+1 not in groups.keys():
-                            groups[j+1] = []
-                        groups[j+1].append(i+1)
+    bond_profile = psi4.qcdb.parker._bond_profile(molecule)
+    for i in range(molecule.natom()):
+        # Find carbon atoms
+        if symbols[i] != 'C':
+            continue
+        # Check that it has 4 bonds
+        bonds_for_atom = [j for j in bond_profile if i in j[:2]]
+        if len(bonds_for_atom) == 4:
+            group = []
+            for atoms in bonds_for_atom:
+                j = atoms[0] if atoms[0] != i else atoms[1]
+                if symbols[j] == 'H':
+                    group.append(j + 1)  
+            if group:
+                groups[i + 1] = group
 
     return groups
 
 
-def set_stage2_constraint(molecule, charges, options, cutoff=1.2):
+def set_stage2_constraint(molecule, charges, options):
     """Sets default constraints for the second stage fit.
 
     The default constraints are the following:
     Atoms that are excluded from the second stage fit are constrained
-    to their charges from the first stage fit. C-H groups that have
-    bonds shorter than the cutoff distance are refitted and the
-    hydrogen atoms connected to the same carbon are constrained to
-    have identical charges. This calls _get_stage2_atoms.
+    to their charges from the first stage fit. C-H groups determined 
+    by _get_stage2_atoms are refitted and the hydrogen atoms connected
+    to the same carbon are constrained to have identical charges.
 
     Parameters
     ----------
@@ -78,7 +74,7 @@ def set_stage2_constraint(molecule, charges, options, cutoff=1.2):
     None
 
     """
-    second_stage = _get_stage2_atoms(molecule, cutoff=cutoff)
+    second_stage = _get_stage2_atoms(molecule)
     atoms = list(range(1, molecule.natom()+1))
     constraint_group = []
     for i in second_stage.keys():
@@ -93,45 +89,3 @@ def set_stage2_constraint(molecule, charges, options, cutoff=1.2):
         constraint_charge.append([charges[i-1], [i]])
     options['constraint_charge'] = constraint_charge
     options['constraint_group'] = constraint_group
-
-
-def stage2_intermolecular_constraint(molecules, cutoff=1.2):
-    """Determines the default intermolecular constraint for multi-molecular
-    fit, in the second stage fit.
-
-    The default is that the equivalent carbon atoms in the different
-    molecules are made equivalent, and only one of the hydrogens
-    in a group is made equivalent with the corresponding hydrogen
-    in the other molecule. This calls get_stage2_atoms and use
-    the given cutoff distance.
-
-    Parameters
-    ----------
-    molecules : list of psi4.Molecule
-        list of psi4.Molecule instances.
-    cutoff : float, optional
-        cutoff distance in Angstroms, exclusive
-
-    Return
-    ------
-    intermolecular_constraint : dict
-        a dictionary of intermolecular constraint
-
-    """
-    inter_constraint = []
-    for mol in range(len(molecules)):
-        equals = [mol,[]]
-        second_stage = _get_stage2_atoms(molecules[mol], cutoff=cutoff)
-        for i in second_stage.keys():
-            equals[1].append(i)
-            try:
-                equals[1].append(second_stage[i][0])
-            except:
-                pass
-        inter_constraint.append(equals)
-    inter = []
-    for i in range(1, len(inter_constraint)):
-        inter.append([inter_constraint[0], inter_constraint[i]])
-    intermolecular_constraint = {'EQUAL': inter}
-
-    return intermolecular_constraint

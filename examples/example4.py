@@ -75,57 +75,47 @@ conf4.set_name('conformer4')
 
 conformers = [conf1, conf2, conf3, conf4]
 
-# Specify intermolecular constraints
-# [conformer1 and conformer2], [conformer 1 and conformer3], [conformer 1 and conformer4]
-#   with atoms 1 through 10
-intermolecular_constraint = {'EQUAL': [[[1, range(1, 11)], [2, range(1, 11)]],
-                                       [[1, range(1, 11)], [3, range(1, 11)]],
-                                       [[1, range(1, 11)], [4, range(1, 11)]]]}
-
-# Specify options (one for each conformation)
-options1 = {'VDW_SCALE_FACTORS' : [1.4, 1.6, 1.8, 2.0],
+# Specify options
+options = {'VDW_SCALE_FACTORS' : [1.4, 1.6, 1.8, 2.0],
            'VDW_POINT_DENSITY'  : 1.0,
            'RESP_A'             : 0.0005,
            'RESP_B'             : 0.1,
            'RESTRAINT'          : True,
            'IHFREE'             : False,
-           'WEIGHT'             : 1,
+           'WEIGHT'             : [1, 1, 1, 1],
            }
-options2 = {'WEIGHT': 1}
-options3 = {'WEIGHT': 1}
-options4 = {'WEIGHT': 1}
-options = [options1, options2, options3, options4]
-
-# Specify additional intramolecular constraints (only need to do for 1 molecule)
+# Specify additional intramolecular constraints
 # (i.e. both O (ids 7 and 9) should have equal charges,
 #   both hydroxyl H (ids 8 and 10) should equal charges,
 #   both C (ids 1 and 4) should have equal charges, and
 #   all four aliphatic H (ids 2, 3, 5 and 6) should have equal charges)
-options[0]["constraint_group"] = [[7, 9], [8, 10], [1, 4], [2, 3, 5, 6]]
+options["constraint_group"] = [[7, 9], [8, 10], [1, 4], [2, 3, 5, 6]]
 
 # Call for first stage fit
-charges1 = resp.resp(conformers, options, intermolecular_constraint)
+charges1 = resp.resp(conformers, options)
 
 print("Restrained Electrostatic Potential Charges")
-print(charges1[0][1])
+print(charges1[1])
+
+resp.set_stage2_constraint(conformers[0], charges1[1], options)
+options['RESP_A'] = 0.001
+
+options['grid'] = []
+options['esp'] = []
 
 # Add constraint for atoms fixed in second stage fit
 for structure in range(len(conformers)):
-    resp.set_stage2_constraint(conformers[structure], charges1[structure][1], options[structure], cutoff=1.2)
-    options[structure]['grid'] = '%i_%s_grid.dat' % (structure + 1, conformers[structure].name())
-    options[structure]['esp'] = '%i_%s_grid_esp.dat' % (structure + 1, conformers[structure].name())
-    options[0]['resp_a'] = 0.001
-    conformers[structure].set_name('conformer' + str(structure + 1) + '_stage2')
+    options['grid'].append('%i_%s_grid.dat' % (structure + 1, conformers[structure].name()))
+    options['esp'].append('%i_%s_grid_esp.dat' % (structure + 1, conformers[structure].name()))
 
 # Add intermolecular constraints
 # Specify additional intramolecular constraints (only need to do for 1 molecule)
 #   both C (ids 1 and 4) should have equal charges, and
 #   all four aliphatic H (ids 2, 3, 5 and 6) should have equal charges)
-options[0]["constraint_group"] = [[1, 4], [2, 3, 5, 6]]
-intermolecular_constraint = resp.stage2_intermolecular_constraint(conformers, cutoff=1.2)
+options["constraint_group"] = [[1, 4], [2, 3, 5, 6]]
 
 # Call for second stage fit
-charges2 = resp.resp(conformers, options, intermolecular_constraint)
+charges2 = resp.resp(conformers, options)
 print("\nStage Two\n")
 print("RESP Charges")
-print(charges2[0][1])
+print(charges2[1])
